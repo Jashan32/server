@@ -116,11 +116,6 @@ class File implements IFile {
 	/**
 	 * Get the node for $path, or for its closest ancestor that is known to the cache.
 	 *
-	 * Copying a folder creates the target directories on the storage before their
-	 * cache entries exist, so while the files inside are written the parent path
-	 * can not be resolved yet. As shares only exist on nodes that are in the cache,
-	 * the access list of the closest known ancestor also applies to $path.
-	 *
 	 * @return ?Node null if not even the user folder itself could be resolved
 	 */
 	private function getClosestExistingNode(IUserFolder $userFolder, string $path): ?Node {
