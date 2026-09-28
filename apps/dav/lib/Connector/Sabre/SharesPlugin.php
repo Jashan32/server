@@ -13,6 +13,7 @@ use OCA\DAV\Connector\Sabre\Exception\Forbidden;
 use OCA\DAV\Connector\Sabre\Node as DavNode;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
+use OCP\Files\Mount\IShareOwnerlessMount;
 use OCP\Files\Node;
 use OCP\Files\NotFoundException;
 use OCP\Files\Storage\ISharedStorage;
@@ -270,14 +271,24 @@ class SharesPlugin extends \Sabre\DAV\ServerPlugin {
 			return true;
 		}
 
+		$sourceStorage = $sourceNode->getStorage();
+		$sourceIsShare = $sourceStorage->instanceOfStorage(ISharedStorage::class);
+		if (!$sourceIsShare && $sourceNode->getMountPoint() instanceof IShareOwnerlessMount) {
+			$sourceParent = $sourceNode->getParent();
+			if (!$this->addsShares($sourceParent, $targetNode->getNode())) {
+				return true;
+			}
+
+			throw new Forbidden('You cannot move a non-shareable node into a share');
+		}
+
 		$targetShares = $this->getSharesForTarget($targetNode->getNode());
 		if ($targetShares === []) {
 			// Target is not a share so no re-sharing in progress
 			return true;
 		}
 
-		$sourceStorage = $sourceNode->getStorage();
-		if ($sourceStorage->instanceOfStorage(ISharedStorage::class)) {
+		if ($sourceIsShare) {
 			// source is also a share - check if it is the same share
 
 			/** @var ISharedStorage $sourceStorage */
@@ -298,5 +309,45 @@ class SharesPlugin extends \Sabre\DAV\ServerPlugin {
 		}
 
 		throw new Forbidden('You cannot move a non-shareable node into a share');
+	}
+
+	/**
+	 * Whether a node placed in $targetNode ends up in a share that does not cover $sourceParent
+	 */
+	private function addsShares(Node $sourceParent, Node $targetNode): bool {
+		$targetMountPoint = $targetNode->getMountPoint();
+		$sameMount = $sourceParent->getMountPoint()->getMountPoint() === $targetMountPoint->getMountPoint();
+		$sourceParentPath = $sourceParent->getPath();
+		// on share-ownerless mounts the shares of a node already include the ones received by the user
+		$includeIncoming = !($targetMountPoint instanceof IShareOwnerlessMount);
+
+		foreach ($this->getNodeAndAncestorsInMount($targetNode) as $node) {
+			$path = $node->getPath();
+			if ($sameMount && ($sourceParentPath === $path || str_starts_with($sourceParentPath, $path . '/'))) {
+				// shares from here up cover the source already
+				return false;
+			}
+
+			if ($this->getShare($node, $includeIncoming && $node === $targetNode) !== []) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * @return \Generator<Node> $node and its ancestors, up to the root of the mount of $node or the user folder
+	 */
+	private function getNodeAndAncestorsInMount(Node $node): \Generator {
+		$mountRoot = rtrim($node->getMountPoint()->getMountPoint(), '/');
+		$userRootPath = $this->rootFolder->getUserFolder($this->userId)->getPath();
+		while (str_starts_with($node->getPath(), $userRootPath . '/')) {
+			yield $node;
+			if ($node->getPath() === $mountRoot) {
+				return;
+			}
+			$node = $node->getParent();
+		}
 	}
 }
