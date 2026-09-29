@@ -76,6 +76,7 @@ return array(
     'NCU\\WorkflowEngine\\Events\\RegisterRuntimeOperationsEvent' => $baseDir . '/lib/unstable/WorkflowEngine/Events/RegisterRuntimeOperationsEvent.php',
     'NCU\\WorkflowEngine\\RuntimeOperation' => $baseDir . '/lib/unstable/WorkflowEngine/RuntimeOperation.php',
     'NCU\\WorkflowEngine\\RuntimeScope' => $baseDir . '/lib/unstable/WorkflowEngine/RuntimeScope.php',
+    'OCA\\Viewer\\Event\\LoadViewer' => $baseDir . '/lib/private/legacy/viewer/Event/LoadViewer.php',
     'OCP\\Accounts\\IAccount' => $baseDir . '/lib/public/Accounts/IAccount.php',
     'OCP\\Accounts\\IAccountManager' => $baseDir . '/lib/public/Accounts/IAccountManager.php',
     'OCP\\Accounts\\IAccountProperty' => $baseDir . '/lib/public/Accounts/IAccountProperty.php',
