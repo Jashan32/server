@@ -565,6 +565,10 @@ class SharesPluginTest extends \Test\TestCase {
 				'/user1/files/GF/B', '/user1/files/Received', '/user1/files/Received/', false,
 				[], ['/user1/files/Received' => ['1']], [], false,
 			],
+			'below a received share' => [
+				'/user1/files/GF/B', '/user1/files/Received/sub', '/user1/files/Received/', false,
+				[], ['/user1/files/Received' => ['1']], [], false,
+			],
 		];
 	}
 

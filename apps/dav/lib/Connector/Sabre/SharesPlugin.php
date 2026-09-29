@@ -275,7 +275,7 @@ class SharesPlugin extends \Sabre\DAV\ServerPlugin {
 		$sourceIsShare = $sourceStorage->instanceOfStorage(ISharedStorage::class);
 		if (!$sourceIsShare && $sourceNode->getMountPoint() instanceof IShareOwnerlessMount) {
 			$sourceParent = $sourceNode->getParent();
-			if (!$this->addsShares($sourceParent, $targetNode->getNode())) {
+			if (!$this->operationAddsShares($sourceParent, $targetNode->getNode())) {
 				return true;
 			}
 
@@ -312,9 +312,20 @@ class SharesPlugin extends \Sabre\DAV\ServerPlugin {
 	}
 
 	/**
-	 * Whether a node placed in $targetNode ends up in a share that does not cover $sourceParent
+	 * Whether moving or copying a node from $sourceParent into $targetNode would expose it to recipients
+	 * that cannot already see it.
+	 *
+	 * Walks the target and its ancestors up to the target's mount root, or the user root if it comes
+	 * first, since a share is a jail over a single storage subtree.
+	 * When target and source are within the same mount the walk ends at the lowest ancestor that is or contains
+	 * $sourceParent: any share at or above it covers the source too, so its recipients can already see
+	 * the node where it is now.
+	 *
+	 * NOTE: shares are only looked up on the target and its ancestors. Manager::getSharesBy() returns every share
+	 * on a path only for share-ownerless mounts and otherwise filters by initiator, so the same-mount shortcut is
+	 * only safe on share-ownerless mounts.
 	 */
-	private function addsShares(Node $sourceParent, Node $targetNode): bool {
+	private function operationAddsShares(Node $sourceParent, Node $targetNode): bool {
 		$targetMountPoint = $targetNode->getMountPoint();
 		$sameMount = $sourceParent->getMountPoint()->getMountPoint() === $targetMountPoint->getMountPoint();
 		$sourceParentPath = $sourceParent->getPath();
@@ -328,7 +339,7 @@ class SharesPlugin extends \Sabre\DAV\ServerPlugin {
 				return false;
 			}
 
-			if ($this->getShare($node, $includeIncoming && $node === $targetNode) !== []) {
+			if ($this->getShare($node, $includeIncoming) !== []) {
 				return true;
 			}
 		}
